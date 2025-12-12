@@ -53,6 +53,38 @@ body {
   box-shadow: 2px 2px 0px var(--border);
 }
 
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: var(--radius);
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500; /* medium */
+  padding: 0.5rem 1rem;
+  background-color: #dc2626; /* Red */
+  color: white;
+  border: 2px solid #ef4444;
+  box-shadow: 4px 4px 0px #ef4444;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Yusei Magic', sans-serif;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.delete-button:hover {
+  background-color: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0px #ef4444;
+}
+
+.delete-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #ef4444;
+}
+
 .pop-card {
   background-color: var(--card);
   color: var(--card-foreground);

@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader } from "./components/ui/dialog";
 import { Card } from "./components/ui/card";
+import { Button } from "./components/ui/button";
 import { DialogTitle } from "@radix-ui/react-dialog";
-import { Link } from "react-router";
+import { Link } from "react-router"; // Corrected import to react-router
 
 type Music = {
-  id: number;
+  id: string;
   title: string;
   artist: string;
   audioUrl: string;
@@ -16,7 +17,7 @@ type Music = {
 function App() {
   const musicList = [
     {
-      id: 1,
+      id: "1",
       title: "Synthwave Dreams",
       artist: "AI Composer",
       audioUrl:
@@ -25,7 +26,7 @@ function App() {
         "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop&crop=center",
     },
     {
-      id: 2,
+      id: "2",
       title: "Jazz Fusion",
       artist: "Neural Network",
       audioUrl:
@@ -34,7 +35,7 @@ function App() {
         "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=400&fit=crop&crop=center",
     },
     {
-      id: 3,
+      id: "3",
       title: "Ambient Spaces",
       artist: "Deep Learning",
       audioUrl:
@@ -44,24 +45,30 @@ function App() {
     },
   ];
 
-  const [generatedMusic, setGeneratedMusic] = useState<Music[]>([]);
+  const [generatedMusic, setGeneratedMusic] = useState<Music[]>(() => {
+    const savedMusic = JSON.parse(
+      localStorage.getItem("generatedMusic") || "[]"
+    );
+    return savedMusic;
+  });
   const [selectedAlbum, setSelectedAlbum] = useState<Music | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    const savedMusic = JSON.parse(
-      localStorage.getItem("generatedMusic") || "[]"
+  const handleDeleteMusic = (idToDelete: string) => {
+    const updatedMusicList = generatedMusic.filter(
+      (music) => music.id !== idToDelete
     );
-    setGeneratedMusic(savedMusic);
-  }, []);
+    setGeneratedMusic(updatedMusicList);
+    localStorage.setItem("generatedMusic", JSON.stringify(updatedMusicList));
+  };
 
   const handlePlayPause = () => {
     if (!selectedAlbum) return;
 
-    if (!audio) {
+    if (!audioRef.current) {
       const newAudio = new Audio(selectedAlbum.audioUrl);
       newAudio.addEventListener("loadedmetadata", () => {
         setDuration(newAudio.duration);
@@ -73,24 +80,24 @@ function App() {
         setIsPlaying(false);
         setCurrentTime(0);
       });
-      setAudio(newAudio);
+      audioRef.current = newAudio;
       newAudio.play().catch(console.error);
       setIsPlaying(true);
     } else {
       if (isPlaying) {
-        audio.pause();
+        audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        audio.play().catch(console.error);
+        audioRef.current.play().catch(console.error);
         setIsPlaying(true);
       }
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audio) {
+    if (audioRef.current) {
       const seekTime = parseFloat(e.target.value);
-      audio.currentTime = seekTime;
+      audioRef.current.currentTime = seekTime;
       setCurrentTime(seekTime);
     }
   };
@@ -102,26 +109,23 @@ function App() {
   };
 
   useEffect(() => {
-    if (audio && selectedAlbum) {
-      audio.pause();
-      audio.currentTime = 0;
+    if (audioRef.current && selectedAlbum) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
-      setAudio(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAlbum?.id]);
+  }, [selectedAlbum]);
 
   useEffect(() => {
     return () => {
-      if (audio) {
-        audio.pause();
-        setAudio(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audio]);
+  }, []);
 
   return (
     <div className="app-root">
@@ -130,10 +134,10 @@ function App() {
           <div className="header-content">
             <h1 className="page-title">音楽生成AI</h1>
             <Link to="/create">
-              <button className="pop-button">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button className="dialog-button-base">
+                <Plus className="w-4 h-4 mr-2" /> {/* Plus icon styles kept */}
                 音楽を生成する
-              </button>
+              </Button>
             </Link>
           </div>
         </div>
@@ -148,7 +152,6 @@ function App() {
                 <Card
                   key={`generated-${music.id}`}
                   onClick={() => setSelectedAlbum(music)}
-                  className="pop-card"
                 >
                   <div className="card-image-wrapper">
                     <img
@@ -161,15 +164,22 @@ function App() {
                       }}
                     />
                     <div className="card-play-button-overlay">
-                      <button className="pop-button dialog-small-button">
+                      <Button className="dialog-button-base dialog-small-button">
                         <Play className="w-4 h-4 ml-0.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                  <div className="card-content">
-                    <h4 className="card-title-text">{music.title}</h4>
-                    <p className="card-artist-text">{music.artist}</p>
-                  </div>
+                  <h4 className="card-title-text">{music.title}</h4>
+                  <p className="card-artist-text">{music.artist}</p>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Card の onClick イベントが発火しないようにする
+                      handleDeleteMusic(music.id);
+                    }}
+                    className="delete-button" // スタイルは後で調整
+                  >
+                    削除
+                  </Button>
                 </Card>
               ))}
             </div>
@@ -180,11 +190,7 @@ function App() {
           <h3 className="section-title">音楽サンプル</h3>
           <div className="music-grid">
             {musicList.map((album) => (
-              <Card
-                key={album.id}
-                onClick={() => setSelectedAlbum(album)}
-                className="pop-card"
-              >
+              <Card key={album.id} onClick={() => setSelectedAlbum(album)}>
                 <div className="card-image-wrapper">
                   <img
                     src={album.coverUrl}
@@ -196,22 +202,23 @@ function App() {
                     }}
                   />
                   <div className="card-play-button-overlay">
-                    <button className="pop-button dialog-small-button">
+                    <Button className="dialog-button-base dialog-small-button">
                       <Play className="w-4 h-4 ml-0.5" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
-                <div className="card-content">
-                  <h4 className="card-title-text">{album.title}</h4>
-                  <p className="card-artist-text">{album.artist}</p>
-                </div>
+                <h4 className="card-title-text">{album.title}</h4>
+                <p className="card-artist-text">{album.artist}</p>
               </Card>
             ))}
           </div>
         </section>
       </main>
 
-      <Dialog open={!!selectedAlbum} onOpenChange={() => setSelectedAlbum(null)}>
+      <Dialog
+        open={!!selectedAlbum}
+        onOpenChange={() => setSelectedAlbum(null)}
+      >
         <DialogContent className="dialog-content">
           <DialogHeader className="dialog-header">
             <DialogTitle className="dialog-title">Now Playing</DialogTitle>
@@ -228,26 +235,56 @@ function App() {
                 <p className="dialog-p">{selectedAlbum.artist}</p>
               </div>
               <div className="dialog-button-container">
-                <button
+                <Button
                   onClick={handlePlayPause}
-                  className="pop-button dialog-play-button"
+                  className="dialog-button-base dialog-play-button"
                 >
                   {isPlaying ? (
                     <Pause className="w-6 h-6" />
                   ) : (
-                    <Play className="w-6 h-6" />
+                    <Play className="w-6 h-6 ml-1" />
                   )}
-                </button>
+                </Button>
               </div>
               <div className="music-slider-wrapper">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 0}
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="music-slider-input"
-                />
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="music-slider-input"
+                    style={{
+                      background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
+                        (currentTime / (duration || 1)) * 100
+                      }%, #4b5563 ${
+                        (currentTime / (duration || 1)) * 100
+                      }%, #4b5563 100%)`,
+                    }}
+                  />
+                  <style>{`
+                    .music-slider-input::-webkit-slider-thumb {
+                      appearance: none;
+                      width: 16px;
+                      height: 16px;
+                      border-radius: 50%;
+                      background: var(--primary);
+                      cursor: pointer;
+                      border: 2px solid var(--primary);
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    }
+                    .music-slider-input::-moz-range-thumb {
+                      width: 16px;
+                      height: 16px;
+                      border-radius: 50%;
+                      background: var(--primary);
+                      cursor: pointer;
+                      border: 2px solid var(--primary);
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    }
+                  `}</style>
+                </div>
                 <div className="music-slider-info">
                   <span>{formatTime(currentTime)}</span>
                   <span>{formatTime(duration)}</span>
