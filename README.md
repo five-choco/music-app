@@ -1,74 +1,60 @@
-# React + TypeScript + Vite
+# 音楽生成AI Webアプリ
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+このアプリケーションは、テキストプロンプトからAIを用いて音楽を生成するWebアプリケーションです。曲のタイトル、ジャンル、詳細な説明を入力することで、オリジナルの音楽を作成し、試聴・保存することができます。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **AIによる音楽生成**: タイトル、ジャンル、詳細なプロンプトに基づいて、オリジナルの音楽を作成します。
+- **プレビュー機能**: 生成された音楽をその場で試聴できます。
+- **コレクション保存**: 作成した音楽をブラウザのLocalStorageに保存し、いつでも聴き返すことができます。
+- **サンプル音楽**: あらかじめ用意されたサンプル音楽を試聴できます。
 
-## React Compiler
+## 使用技術
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **フロントエンド**: React, Vite, TypeScript
+- **HTTPクライアント**: axios
+- **UIコンポーネント**: shadcn/ui スタイルのコンポーネント
+- **ルーティング**: React Router
 
-## Expanding the ESLint configuration
+## セットアップと実行方法
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 1. 前提条件
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- [Node.js](https://nodejs.org/) (v18以上を推奨)
+- [npm](https://www.npmjs.com/)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 2. APIキーの設定
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+このアプリケーションは、音楽生成にLoudly APIを使用します。
+
+1.  プロジェクトのルートディレクトリ（このファイルがある場所）に `.env.local` という名前のファイルを作成してください。
+2.  作成したファイルに、以下の形式であなたのAPIキーを記述します。
+
+    ```
+    VITE_LOUDLY_API_KEY="ここにあなたのLoudly APIキーを入力"
+    ```
+
+### 3. パッケージのインストール
+
+プロジェクトのルートディレクトリで、以下のコマンドを実行して必要なパッケージをインストールします。
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 4. 開発サーバーの起動
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+インストール完了後、以下のコマンドで開発サーバーを起動します。
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
-# music-app
+
+起動後、ターミナルに表示される `http://localhost:xxxx` のようなURLにブラウザでアクセスしてください。
+
+## 利用可能なスクリプト
+
+- `npm run dev`: 開発モードでアプリケーションを起動します。
+- `npm run build`: 本番環境用にプロジェクトをビルドします。
+- `npm run lint`: ESLintを実行して、コードの品質とスタイルをチェックします。
+- `npm run preview`: ビルド後のアプリケーションをローカルでプレビューします。
