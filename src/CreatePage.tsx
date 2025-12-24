@@ -1,5 +1,4 @@
-import { useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Textarea } from "./components/ui/textarea";
 import { Input } from "./components/ui/input";
@@ -11,8 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
-import { Music, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { Music, Loader2, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useMusicGeneration } from "@/hooks/useMusicGeneration";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { LOCAL_STORAGE_MUSIC_KEY, FALLBACK_IMAGE_URL } from "@/lib/constants";
 
 type Music = {
   id: string;
@@ -26,76 +28,43 @@ function CreatePage() {
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [generatedMusic, setGeneratedMusic] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
 
-  const handleGenerate = async () => {
+  const { isGenerating, generatedTrack, error, startGeneration } = useMusicGeneration();
+  const [savedMusic, setSavedMusic] = useLocalStorage<Music[]>(LOCAL_STORAGE_MUSIC_KEY, []);
+
+  const handleGenerate = () => {
     if (!title.trim() || !genre || !prompt.trim()) {
       alert("すべてのフィールドを入力してください");
       return;
     }
-
-    const apiKey = import.meta.env.VITE_LOUDLY_API_KEY;
-
-    if (!apiKey) {
-      alert("APIキーが設定されていません");
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const formData = new FormData();
-      const musicPrompt = `Create a ${genre} song titled "${title}". Musical style: ${prompt}. High quality production with clear melody and rhythm.`;
-      formData.append("prompt", musicPrompt);
-      formData.append("duration", "30");
-
-      const response = await axios.post(
-        "https://soundtracks.loudly.com/api/ai/prompt/songs",
-        formData,
-        {
-          headers: {
-            "API-KEY": apiKey,
-          },
-        }
-      );
-
-      if (response.data && response.data.music_file_path) {
-        setGeneratedMusic(response.data.music_file_path);
-      } else {
-        throw new Error("音楽ファイルパスが取得できませんでした");
-      }
-    } catch (error) {
-      console.error("エラー:", error);
-      alert("音楽生成に失敗しました");
-    } finally {
-      setIsGenerating(false);
-    }
+    startGeneration(title, genre, prompt);
   };
 
   const handleSave = () => {
-    if (!generatedMusic || !title || !genre) {
+    if (!generatedTrack || !title || !genre) {
       alert("音楽を生成してから保存してください");
       return;
     }
 
-    const musicData: Music = {
+    const newMusic: Music = {
       id: Date.now().toString(),
       title: title,
       artist: "AI Generated",
-      audioUrl: generatedMusic,
-      coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+      audioUrl: generatedTrack.musicUrl,
+      coverUrl: generatedTrack.coverUrl,
     };
 
-    const savedMusic = JSON.parse(
-      localStorage.getItem("generatedMusic") || "[]"
-    );
-    savedMusic.push(musicData);
-    localStorage.setItem("generatedMusic", JSON.stringify(savedMusic));
-
+    setSavedMusic([...savedMusic, newMusic]);
     alert("音楽を保存しました！");
   };
+
+  useEffect(() => {
+    if (error) {
+      // You might want a more sophisticated notification system
+      alert(`エラー: ${error}`);
+    }
+  }, [error]);
 
   return (
     <div className="app-root">
@@ -165,9 +134,7 @@ function CreatePage() {
 
               <button
                 onClick={handleGenerate}
-                disabled={
-                  !title.trim() || !genre || !prompt.trim() || isGenerating
-                }
+                disabled={!title.trim() || !genre || !prompt.trim() || isGenerating}
                 className="pop-button"
               >
                 {isGenerating ? (
@@ -185,7 +152,6 @@ function CreatePage() {
             </CardContent>
           </Card>
 
-          {/* プレビュー */}
           <Card className="pop-card">
             <CardHeader>
               <CardTitle className="card-title">プレビュー</CardTitle>
@@ -200,42 +166,42 @@ function CreatePage() {
                     <span className="dialog-p dialog-text-center">This may take a few moments</span>
                   </p>
                 </div>
-              ) : generatedMusic ? (
+              ) : error ? (
+                <div className="preview-empty-placeholder">
+                  <AlertCircle className="w-12 h-12 text-destructive" />
+                   <p className="dialog-p dialog-text-center text-destructive">
+                    音楽の生成に失敗しました。
+                    <br />
+                    <span className="text-xs">{error}</span>
+                  </p>
+                </div>
+              ) : generatedTrack ? (
                 <div className="preview-generated-content">
                   <div className="preview-image-wrapper">
                     <img
-                      src={`https://picsum.photos/400/400?random=${Date.now()}`}
+                      src={generatedTrack.coverUrl}
                       alt="Generated album cover"
                       className="preview-image"
                       onError={(e) => {
-                        e.currentTarget.src =
-                          "https://picsum.photos/400/400?random=1";
+                        e.currentTarget.src = FALLBACK_IMAGE_URL;
                       }}
                     />
                   </div>
 
                   <div className="dialog-text-center dialog-body">
-                    <h3 className="dialog-h3">
-                      {title || "Untitled"}
-                    </h3>
+                    <h3 className="dialog-h3">{title || "Untitled"}</h3>
                     <p className="dialog-p capitalize">
                       {genre ? `${genre} • AI Generated` : "AI Generated"}
                     </p>
                   </div>
 
                   <div className="form-section">
-                    <audio
-                      controls
-                      className="preview-audio"
-                    >
-                      <source src={generatedMusic} type="audio/mpeg" />
+                    <audio controls className="preview-audio" key={generatedTrack.musicUrl}>
+                      <source src={generatedTrack.musicUrl} type="audio/mpeg" />
                       Your browser does not support the audio element.
                     </audio>
 
-                    <button
-                      onClick={handleSave}
-                      className="pop-button"
-                    >
+                    <button onClick={handleSave} className="pop-button">
                       Save to Collection
                     </button>
                   </div>
